@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Country Explorer Prototype</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+        }
+
+        .progress-bar-bg {
+            background-color: #334155;
+            border-radius: 999px;
+            overflow: hidden;
+            height: 8px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 999px;
+        }
+
+        /* Map placeholder styling */
+        .map-placeholder {
+            background: url('https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Blank_Map_United_Kingdom.svg/512px-Blank_Map_United_Kingdom.svg.png') no-repeat center center;
+            background-size: contain;
+            opacity: 0.8;
+            position: relative;
+        }
+
+        .pulse-dot {
+            width: 14px;
+            height: 14px;
+            background-color: #38bdf8;
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+            animation: pulse 2s infinite;
+        }
+
+        .pulse-dot.red {
+            background-color: #f87171;
+            box-shadow: 0 0 15px rgba(248, 113, 113, 0.5);
+        }
+
+        .pulse-dot.yellow {
+            background-color: #fbbf24;
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.5);
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.4);
+                opacity: 0.6;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Custom Legend Styles for Doughnut Charts */
+        .chart-legend-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 11px;
+            color: #cbd5e1;
+        }
+
+        .chart-legend-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .chart-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chart-legend-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            shrink-0;
+        }
+
+        .chart-legend-right {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            shrink-0;
+        }
+
+        .chart-legend-value {
+            font-weight: 600;
+            color: #fff;
+            width: 32px;
+            text-align: right;
+        }
+
+        .chart-legend-trend {
+            font-size: 10px;
+            width: 44px;
+            text-align: right;
+            font-weight: 500;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.15);
+        }
+
+        .trend-up {
+            color: #34d399;
+            background: rgba(52, 211, 153, 0.1);
+            border: 1px solid rgba(52, 211, 153, 0.2);
+        }
+
+        .trend-down {
+            color: #fb7185;
+            background: rgba(251, 113, 133, 0.1);
+            border: 1px solid rgba(251, 113, 133, 0.2);
+        }
+
+        .trend-flat {
+            color: #94a3b8;
+            background: rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+    </style>
+</head>
+
+<body class="p-4 h-screen flex flex-col gap-4 overflow-hidden">
+
+    <!-- Header / Nav -->
+    <header class="flex justify-between items-center glass-panel p-3 shrink-0">
+        <div class="flex items-center gap-3">
+            <div
+                class="w-8 h-8 rounded bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20">
+                G</div>
+            <h1 class="text-xl font-bold tracking-tight text-white">Getplace <span
+                    class="text-slate-500 font-normal ml-1">| Country Explorer</span></h1>
+        </div>
+        <div class="flex gap-4 items-center">
+            <span class="text-xs text-slate-400 font-medium px-2 uppercase tracking-wide">Q1 2026</span>
+            <select
+                class="bg-slate-800 border border-slate-700 text-sm rounded-lg px-3 py-1.5 text-white outline-none focus:border-blue-500 shadow-inner">
+                <option>🇬🇧 United Kingdom</option>
+                <option>🇦🇪 UAE</option>
+                <option>🇹🇷 Turkey</option>
+            </select>
+            <select
+                class="bg-slate-800 border border-slate-700 text-sm rounded-lg px-3 py-1.5 text-white outline-none focus:border-blue-500 shadow-inner">
+                <option>🍔 Burgers</option>
+                <option>🍕 Pizza</option>
+                <option>☕ Coffee</option>
+            </select>
+        </div>
+    </header>
+
+    <div class="flex-1 overflow-y-auto pr-2 pb-8 space-y-6 relative" id="main-scroll">
+
+        <!-- LEVEL 1: Executive Dashboard -->
+        <section id="executive-dashboard" class="block fade-in">
+            <div class="flex items-center gap-3 mb-4">
+                <h2 class="text-xl font-semibold text-white tracking-tight">The Executive Dashboard</h2>
+                <span
+                    class="text-xs px-2.5 py-1 bg-slate-800 border border-slate-700 rounded-md text-slate-300 font-medium">Bird's-eye
+                    view</span>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-4 gap-4 mb-5">
+                <!-- KPI 1 -->
+                <div
+                    class="glass-panel p-4 relative overflow-hidden group hover:border-slate-500 transition-colors flex flex-col justify-center">
+                    <div
+                        class="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/10 rounded-full blur-xl group-hover:bg-blue-500/20 transition-colors">
+                    </div>
+                    <div class="text-slate-400 text-xs mb-1.5 font-medium">Total Active Outlets</div>
+                    <div class="flex items-baseline gap-2">
+                        <div class="text-2xl font-bold text-white">6,842</div>
+                        <div
+                            class="text-xs font-medium text-emerald-400 flex items-center bg-emerald-400/10 px-1.5 py-0.5 rounded">
+                            ↑ 3.2% <span class="text-[9px] text-emerald-500/70 ml-1 uppercase">QoQ</span></div>
+                    </div>
+                </div>
+                <!-- KPI 2 -->
+                <div
+                    class="glass-panel p-4 relative overflow-hidden group hover:border-slate-500 transition-colors flex flex-col justify-center">
+                    <div
+                        class="absolute -right-4 -top-4 w-24 h-24 bg-amber-500/10 rounded-full blur-xl group-hover:bg-amber-500/20 transition-colors">
+                    </div>
+                    <div class="text-slate-400 text-xs mb-1.5 font-medium">Net Growth Rate</div>
+                    <div class="flex items-baseline gap-2">
+                        <div class="text-2xl font-bold text-white">+112</div>
+                        <div
+                            class="text-xs font-medium text-amber-400 flex items-center bg-amber-400/10 px-1.5 py-0.5 rounded">
+                            ↓ 1.4% <span class="text-[9px] text-amber-500/70 ml-1 uppercase">QoQ</span></div>
+                    </div>
+                </div>
+                <!-- KPI 3 -->
+                <div
+                    class="glass-panel p-4 relative overflow-hidden group hover:border-slate-500 transition-colors flex flex-col justify-center">
+                    <div
+                        class="absolute -right-4 -top-4 w-24 h-24 bg-slate-500/10 rounded-full blur-xl group-hover:bg-slate-500/20 transition-colors">
+                    </div>
+                    <div class="text-slate-400 text-xs mb-1.5 font-medium">Avg Consumer Rating</div>
+                    <div class="flex items-baseline gap-2">
+                        <div class="text-2xl font-bold text-white">4.1 <span
+                                class="text-slate-500 text-lg font-normal">/5</span></div>
+                        <div
+                            class="text-xs font-medium text-slate-400 flex items-center bg-slate-700/50 px-1.5 py-0.5 rounded">
+                            — 0.0% <span class="text-[9px] text-slate-500/70 ml-1 uppercase">QoQ</span></div>
+                    </div>
+                </div>
+                <!-- KPI 4 -->
+                <div
+                    class="glass-panel p-4 relative overflow-hidden group hover:border-slate-500 transition-colors flex flex-col justify-center">
+                    <div
+                        class="absolute -right-4 -top-4 w-24 h-24 bg-rose-500/10 rounded-full blur-xl group-hover:bg-rose-500/20 transition-colors">
+                    </div>
+                    <div class="text-slate-400 text-xs mb-1.5 font-medium">National Price Index</div>
+                    <div class="flex items-baseline gap-2">
+                        <div class="text-2xl font-bold text-white">£12.50</div>
+                        <div
+                            class="text-xs font-medium text-rose-400 flex items-center bg-rose-400/10 px-1.5 py-0.5 rounded">
+                            ↑ 2.1% <span class="text-[9px] text-rose-500/70 ml-1 uppercase">QoQ</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row (Now 4 columns instead of 3 to give the insight panel more room, and fixed height) -->
+            <div class="grid grid-cols-4 gap-4 h-[380px]"> <!-- Set explicit container height -->
+                <!-- Chart 1: Aggregator Split -->
+                <div class="glass-panel p-5 col-span-1 flex flex-col h-full bg-slate-800/20">
+                    <div class="flex justify-between items-center mb-0 shrink-0">
+                        <h3 class="text-sm font-semibold text-slate-200 tracking-wide uppercase">Aggregator Split</h3>
+                        <span
+                            class="text-[9px] text-slate-500 uppercase px-1.5 py-0.5 bg-slate-800 rounded font-medium">vs
+                            Last Qtr</span>
+                    </div>
+
+                    <!-- Graph takes available space -->
+                    <div class="relative flex-1 w-full flex items-center justify-center min-h-0 py-2">
+                        <div class="w-full h-full max-w-[160px] max-h-[160px]">
+                            <canvas id="aggregatorChart"></canvas>
+                        </div>
+                        <!-- Center text overlay -->
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span class="text-2xl font-bold text-white leading-none mb-1">4</span>
+                            <span class="text-[9px] text-slate-400 uppercase tracking-widest">Platforms</span>
+                        </div>
+                    </div>
+
+                    <!-- Legend stays at bottom -->
+                    <div class="shrink-0 space-y-1.5 pt-2" id="aggregatorLegend">
+                        <div
+                            class="chart-legend-item group hover:bg-slate-700/30 rounded px-1.5 -mx-1.5 transition-colors">
+                            <div class="chart-legend-left">
+                                <div class="chart-legend-color bg-[#10b981]"></div><span
+                                    class="chart-name group-hover:text-white transition-colors">UberEats</span>
+                            </div>
+                            <div class="chart-legend-right">
+                                <span class="chart-legend-value">42%</span><span class="chart-legend-trend trend-down">↓
+                                    1.2%</span>
+                            </div>
+                        </div>
+                        <div
+                            class="chart-legend-item group hover:bg-slate-700/30 rounded px-1.5 -mx-1.5 transition-colors">
+                            <div class="chart-legend-left">
+                                <div class="chart-legend-color bg-[#06b6d4]"></div><span
+                                    class="chart-name group-hover:text-white transition-colors">Deliveroo</span>
+                            </div>
+                            <div class="chart-legend-right">
+                                <span class="chart-legend-value">35%</span><span class="chart-legend-trend trend-up">↑
+                                    2.4%</span>
+                            </div>
+                        </div>
+                        <div
+                            class="chart-legend-item group hover:bg-slate-700/30 rounded px-1.5 -mx-1.5 transition-colors">
+                            <div class="chart-legend-left">
+                                <div class="chart-legend-color bg-[#f59e0b]"></div><span
+                                    class="chart-name group-hover:text-white transition-colors">JustEat</span>
+                            </div>
+                            <div class="chart-legend-right">
+                                <span class="chart-legend-value">18%</span><span class="chart-legend-trend trend-down">↓
+                                    1.5%</span>
+                            </div>
+                        </div>
+                        <div
+                            class="chart-legend-item group hover:bg-slate-700/30 rounded px-1.5 -mx-1.5 transition-colors">
+                            <div class="chart-legend-left">
+                                <div class="chart-legend-color bg-[#334155]"></div><span
+                                    class="chart-name group-hover:text-white transition-colors">Direct App</span>
+                            </div>
+                            <div class="chart-legend-right">
+                                <span class="chart-legend-value">5%</span><span class="chart-legend-trend trend-up">↑
+                                    0.3%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Market Monopoly -->
+                <div class="glass-panel p-5 col-span-1 flex flex-col h-full bg-slate-800/20">
+                    <div class="flex justify-between items-center mb-0 shrink-0">
+                        <h3 class="text-sm font-semibold text-slate-200 tracking-wide uppercase">Market Monopoly</h3>
+                        <span
+                            class="text-[9px] text-slate-500 uppercase px-1.5 py-0.5 bg-slate-800 rounded font-medium">vs
+                            Last Qtr</span>
+                    </div>
+
+                    <div class="relative flex-1 w-full flex items-center justify-center min-h-0 py-2">
+                        <div class="w-full h-full max-w-[160px] max-h-[160px]">
+                            <canvas id="marketShareChart"></canvas>
+                        </div>
+                        <!-- Center text overlay -->
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span class="text-2xl font-bold text-white leading-none mb-1">52%</span>
+                            <span
+                                class="text-[9px] text-slate-400 uppercase tracking-widest text-center mt-0.5 leading-tight">Top
+                                3<br>Share</span>
+                        </div>
+                    </div>
+
+                    <div class="shrink-0 space-y-1.5 pt-2" id="marketShareLegend">
+                        <div
+                            class="chart-legend-item group hover:bg-slate-700/30 rounded px-1.5 -mx-1.5 transition-colors">
+                            <div class="chart-legend-left">
+                                <div class="chart-legend-color bg-[#ef4444]"></div><span
+                                    class="chart-name group-hover:text-white transition-colors">McDonald's</span>
+                            </div>
+                            <div class="chart-legend-right">
+                                <span class="chart-legend-value">28%</span><span class="chart-legend-trend trend-down">↓
+                                    0.5%</span>
+                            </div>
+                        </div>
+                        <div
+                            class="chart-legend-item group hover:bg-slate-700/30 rounded px-1.5 -mx-1.5 transition-colors">
+                            <div class="chart-legend-left">
+                                <div class="chart-legend-color bg-[#f97316]"></div><span
+                                    class="chart-name group-hover:text-white transition-colors">Burger King</span>
+                            </div>
+                            <div class="chart-legend-right">
+                                <span class="chart-legend-value">15%</span><span class="chart-legend-trend trend-down">↓
+                                    1.1%</span>
+                            </div>
+                        </div>
+                        <div
+                            class="chart-legend-item group hover:bg-slate-700/30 rounded px-1.5 -mx-1.5 transition-colors">
+                            <div class="chart-legend-left">
+                                <div class="chart-legend-color bg-[#eab308]"></div><span
+                                    class="chart-name group-hover:text-white transition-colors">Five Guys</span>
+                            </div>
+                            <div class="chart-legend-right">
+                                <span class="chart-legend-value">9%</span><span class="chart-legend-trend trend-up">↑
+                                    0.2%</span>
+                            </div>
+                        </div>
+                        <div
+                            class="chart-legend-item group hover:bg-slate-700/30 rounded px-1.5 -mx-1.5 transition-colors">
+                            <div class="chart-legend-left">
+                                <div class="chart-legend-color bg-[#334155]"></div><span
+                                    class="chart-name group-hover:text-white transition-colors text-slate-400">Long
+                                    Tail</span>
+                            </div>
+                            <div class="chart-legend-right">
+                                <span class="chart-legend-value">48%</span><span class="chart-legend-trend trend-up">↑
+                                    1.4%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary & Action (Now takes up 2 columns for a better layout) -->
+                <div
+                    class="glass-panel p-1 col-span-2 bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 h-full">
+                    <div class="h-full bg-slate-900/80 rounded-[15px] p-6 flex flex-col relative overflow-hidden">
+                        <!-- Decorative glow -->
+                        <div
+                            class="absolute -right-20 -top-20 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl pointer-events-none">
+                        </div>
+
+                        <div class="flex items-center justify-between mb-4 z-10 shrink-0">
+                            <div class="flex items-center gap-2 text-white">
+                                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4">
+                                    </path>
+                                </svg>
+                                <h4 class="text-sm font-semibold uppercase tracking-wider text-slate-200">Market Summary
+                                    (Q1 2026)</h4>
+                            </div>
+                        </div>
+
+                        <div class="z-10 flex-1 flex flex-col justify-center">
+                            <ul
+                                class="space-y-3 text-[14.5px] text-slate-300 leading-relaxed marker:text-blue-500 pl-5 list-disc">
+                                <li>
+                                    Independent outlets (<span class="text-white font-medium">Long Tail</span>) show
+                                    consistent market share growth <span
+                                        class="text-emerald-400 font-medium bg-emerald-400/10 px-1 rounded inline-block whitespace-nowrap">+1.4%
+                                        QoQ</span>.
+                                </li>
+                                <li>
+                                    <span
+                                        class="text-white font-medium border-b border-cyan-500/50 pb-0.5">Deliveroo</span>
+                                    expanded its partner network through flexible terms (<span
+                                        class="text-emerald-400 font-medium bg-emerald-400/10 px-1 rounded inline-block whitespace-nowrap">+2.4%
+                                        QoQ</span>), outpacing <span
+                                        class="text-white font-medium border-b border-emerald-500/50 pb-0.5">UberEats</span>
+                                    in the mass segment.
+                                </li>
+                                <li>
+                                    Significant price index increase in the London Zone, where the base combo has
+                                    breached
+                                    the <span class="text-rose-400 font-medium">£16.50</span> threshold.
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- BUTTON: DEEP DIVE -->
+                        <div class="mt-auto z-10 shrink-0 pt-4">
+                            <button onclick="toggleDeepDive(true)"
+                                class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-600/20 group border border-blue-500">
+                                <span>Go to Deep Dive</span>
+                                <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- LEVEL 2: Deep Dive (Hidden by default) -->
+        <section id="deep-dive-section" class="hidden fade-in space-y-5">
+
+            <!-- Navigation Back & Header -->
+            <div class="flex items-center justify-between">
+                <div>
+                    <button onclick="toggleDeepDive(false)"
+                        class="text-sm text-slate-400 hover:text-white flex items-center gap-1.5 mb-1.5 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        Back to Dashboard
+                    </button>
+                    <div class="flex items-center gap-3">
+                        <h2 class="text-xl font-semibold text-white tracking-tight">The Deep Dive</h2>
+                        <span
+                            class="text-xs px-2.5 py-1 bg-blue-900/50 text-blue-300 border border-blue-800/50 rounded-md font-medium">Competitive
+                            Analysis</span>
+                    </div>
+                </div>
+
+                <!-- Competitor toggles -->
+                <div class="flex gap-2 items-end pb-1">
+                    <div
+                        class="px-3 py-1.5 bg-slate-800 rounded-md text-sm border border-slate-700 flex items-center gap-2">
+                        <div class="w-2.5 h-2.5 rounded-full bg-blue-400"></div>
+                        <span class="text-slate-400">You:</span> <span class="text-white font-medium">MyBurger</span>
+                    </div>
+                    <div
+                        class="px-3 py-1.5 bg-slate-800/50 rounded-md text-sm border border-slate-700/50 flex items-center gap-2">
+                        <div class="w-2.5 h-2.5 rounded-full bg-rose-400"></div>
+                        <span class="text-slate-400">vs</span> <span class="text-white font-medium">McDonald's</span>
+                    </div>
+                    <div
+                        class="px-3 py-1.5 bg-slate-800/50 rounded-md text-sm border border-slate-700/50 flex items-center gap-2">
+                        <div class="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
+                        <span class="text-slate-400">vs</span> <span class="text-white font-medium">KFC</span>
+                    </div>
+                    <button
+                        class="ml-2 w-8 h-8 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:border-slate-500 transition-colors"
+                        title="Add Competitor">
+                        +
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-5 h-[500px]">
+                <!-- Layered Map Area (5 columns) -->
+                <div
+                    class="glass-panel p-0 col-span-5 relative overflow-hidden flex flex-col group border border-slate-700/50">
+                    <!-- Map Header & Layer Filters -->
+                    <div
+                        class="p-4 border-b border-slate-700/50 z-10 bg-slate-900/80 backdrop-blur-md w-full flex flex-col gap-2 shrink-0">
+                        <h3 class="text-sm font-semibold text-slate-200">Interactive Regional Map</h3>
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                class="px-2.5 py-1 bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white text-[10px] font-medium rounded-md border border-rose-500/50 transition-all shadow-[0_0_10px_rgba(225,29,72,0.15)] flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path>
+                                </svg>
+                                Market Share
+                            </button>
+                            <button
+                                class="px-2.5 py-1 bg-slate-800 text-slate-400 hover:text-slate-200 text-[10px] font-medium rounded-md border border-slate-700 transition-all flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                </svg>
+                                Delivery Gaps
+                            </button>
+                            <button
+                                class="px-2.5 py-1 bg-slate-800 text-slate-400 hover:text-slate-200 text-[10px] font-medium rounded-md border border-slate-700 transition-all flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                                    </path>
+                                </svg>
+                                Price Index
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Map Container -->
+                    <div class="map-placeholder flex-1 w-full opacity-70 group-hover:opacity-100 transition-opacity duration-500 relative bg-slate-800/20"
+                        style="background-size: 85%; background-position: center 5%;">
+                        <!-- Heatmap Overlay / Pulses (Simulating Competitive Threat) -->
+                        <div class="absolute w-32 h-32 bg-rose-500/20 rounded-full blur-2xl"
+                            style="top: 55%; left: 55%;"></div>
+                        <div class="pulse-dot red" style="top: 70%; left: 65%;" title="London"></div>
+
+                        <div class="absolute w-20 h-20 bg-amber-500/15 rounded-full blur-xl"
+                            style="top: 40%; left: 45%;"></div>
+                        <div class="pulse-dot yellow" style="top: 50%; left: 50%;" title="Manchester"></div>
+
+                        <div class="absolute w-36 h-36 bg-slate-500/10 rounded-full blur-3xl"
+                            style="top: 20%; left: 35%;"></div>
+                        <div class="pulse-dot" style="top: 28%; left: 45%; background-color:#64748b; box-shadow:none;"
+                            title="Scotland"></div>
+                    </div>
+
+                    <!-- Info Card on Map -->
+                    <div
+                        class="absolute bottom-4 left-4 p-3 bg-slate-900/95 backdrop-blur-md border border-emerald-500/40 rounded-lg text-xs w-[90%] shadow-2xl z-20">
+                        <div
+                            class="flex items-center gap-2 mb-2 pb-2 border-b border-slate-800 text-slate-200 font-semibold">
+                            <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                            Opportunity: West London Delivery Gap
+                        </div>
+                        <p class="text-slate-400 text-[11px] leading-relaxed">
+                            High search volume detected. <span class="text-emerald-400 font-medium">0 active MyBurger
+                                zones</span> overlap this area. Capturing this gap could yield +5% regional delivery
+                            growth.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Dynamic Trend Explorer (7 columns) -->
+                <div class="glass-panel p-5 col-span-7 flex flex-col border border-slate-700/50 bg-slate-800/20">
+                    <div class="flex justify-between items-start mb-5 shrink-0">
+                        <h3 class="text-sm font-semibold text-slate-200 tracking-wide uppercase">Performance Dynamics
+                        </h3>
+                    </div>
+
+                    <!-- Controls/Filters -->
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 shrink-0 gap-4">
+                        <div class="flex gap-2">
+                            <select
+                                class="bg-slate-800 border border-slate-700 text-xs rounded px-2.5 py-1.5 text-white outline-none shadow-inner focus:border-blue-500">
+                                <option>Market Share (%)</option>
+                                <option>Avg Combo Price (£)</option>
+                                <option>Active Outlets</option>
+                                <option>Brand Sentiment</option>
+                            </select>
+                            <select
+                                class="bg-slate-800 border border-slate-700 text-xs rounded px-2.5 py-1.5 text-white outline-none shadow-inner focus:border-blue-500">
+                                <option>All Regions</option>
+                                <option>London</option>
+                                <option>North West</option>
+                            </select>
+                            <select
+                                class="bg-slate-800 border border-slate-700 text-xs rounded px-2.5 py-1.5 text-white outline-none shadow-inner focus:border-blue-500">
+                                <option>Quarterly</option>
+                                <option>Monthly</option>
+                            </select>
+                        </div>
+                        <div
+                            class="flex gap-4 text-[11px] font-medium bg-slate-900/50 border border-slate-700/50 px-3 py-1.5 rounded-md">
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" checked class="accent-blue-500 w-3.5 h-3.5">
+                                <span class="text-slate-300">MyBurger</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" checked class="accent-rose-500 w-3.5 h-3.5">
+                                <span class="text-slate-300">McDonald's</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" checked class="accent-amber-500 w-3.5 h-3.5">
+                                <span class="text-slate-300">KFC</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Chart Container -->
+                    <div class="flex-1 w-full relative min-h-0 pt-3 border-t border-slate-700/50 mt-1">
+                        <canvas id="dynamicTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Competitive Benchmarking Table -->
+            <div class="glass-panel p-5 flex flex-col border border-slate-700/50 bg-slate-800/20 mt-5">
+                <div class="flex flex-wrap justify-between items-start gap-3 mb-5 shrink-0">
+                    <h3 class="text-sm font-semibold text-slate-200 tracking-wide uppercase">Competitive Benchmarking
+                    </h3>
+                    <!-- Controls/Filters -->
+                    <div class="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
+                        <div class="flex items-center">
+                            <select id="benchmarkComparisonTarget"
+                                class="bg-slate-800 border border-slate-700 text-xs rounded px-2.5 py-1.5 text-white outline-none shadow-inner focus:border-blue-500">
+                            <option value="mcd" selected>vs McDonald's</option>
+                            <option value="kfc">vs KFC</option>
+                            <option value="marketAvg">vs Market Average</option>
+                        </select>
+                        </div>
+                        <details class="relative">
+                            <summary
+                                class="list-none cursor-pointer select-none bg-slate-800 border border-slate-700 text-xs rounded px-2.5 py-1.5 text-white outline-none shadow-inner hover:border-slate-600 flex items-center gap-2">
+                                <span class="text-slate-300">Metrics</span>
+                                <span id="benchmarkMetricSummary" class="text-slate-500 text-[10px] uppercase tracking-wide"></span>
+                            </summary>
+                            <div id="benchmarkMetricControls"
+                                class="absolute right-0 top-full mt-2 z-20 min-w-[260px] max-h-64 overflow-y-auto rounded-lg border border-slate-700/80 bg-slate-900/95 backdrop-blur p-2 shadow-2xl"></div>
+                        </details>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto pb-2">
+                    <table id="competitiveBenchmarkTable" class="w-full text-left border-collapse whitespace-nowrap"></table>
+                </div>
+            </div>
+
+            <!-- Expansion Opportunity Ranking -->
+            <div class="glass-panel p-5 flex flex-col border border-slate-700/50 bg-slate-800/20 mt-5">
+                <div class="flex flex-wrap justify-between items-start gap-3 mb-4 shrink-0">
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-200 tracking-wide uppercase">Expansion Opportunity Ranking</h3>
+                    </div>
+                    <div class="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
+                        <details class="relative">
+                            <summary
+                                class="list-none cursor-pointer select-none bg-slate-800 border border-slate-700 text-xs rounded px-2.5 py-1.5 text-white outline-none shadow-inner hover:border-slate-600 flex items-center gap-2">
+                                <span class="text-slate-300">Metrics</span>
+                                <span id="expansionMetricSummary" class="text-slate-500 text-[10px] uppercase tracking-wide"></span>
+                            </summary>
+                            <div id="expansionMetricControls"
+                                class="absolute right-0 top-full mt-2 z-20 min-w-[280px] max-h-72 overflow-y-auto rounded-lg border border-slate-700/80 bg-slate-900/95 backdrop-blur p-2 shadow-2xl"></div>
+                        </details>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto pb-2">
+                    <table id="expansionOpportunityTable" class="w-full text-left border-collapse whitespace-nowrap"></table>
+                </div>
+            </div>
+
+        </section>
+
+        <script>
+            // Tab routing logic
+            function toggleDeepDive(show) {
+                const execDash = document.getElementById('executive-dashboard');
+                const deepDive = document.getElementById('deep-dive-section');
+                const mainScroll = document.getElementById('main-scroll');
+
+                if (show) {
+                    execDash.classList.remove('block');
+                    execDash.classList.add('hidden');
+
+                    deepDive.classList.remove('hidden');
+                    deepDive.classList.add('block');
+                } else {
+                    deepDive.classList.remove('block');
+                    deepDive.classList.add('hidden');
+
+                    execDash.classList.remove('hidden');
+                    execDash.classList.add('block');
+                }
+                mainScroll.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+
+            // Setup Chart.js Defaults
+            Chart.defaults.color = '#64748b';
+            Chart.defaults.font.family = 'Inter';
+            Chart.defaults.scale.grid.color = 'rgba(255, 255, 255, 0.03)';
+            Chart.defaults.animation = { duration: 1500, easing: 'easeOutQuart' };
+
+            // Aggregator Chart
+            new Chart(document.getElementById('aggregatorChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['UberEats', 'Deliveroo', 'JustEat', 'DirectApp'],
+                    datasets: [{
+                        data: [42, 35, 18, 5],
+                        backgroundColor: ['#10b981', '#06b6d4', '#f59e0b', '#334155'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: { cutout: '82%', plugins: { legend: { display: false }, tooltip: { padding: 8 } }, maintainAspectRatio: false }
+            });
+
+            // Market Share Chart
+            new Chart(document.getElementById('marketShareChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['McDonald\'s', 'KFC', 'Wendy\'s', 'Long Tail'],
+                    datasets: [{
+                        data: [28, 15, 9, 48],
+                        backgroundColor: ['#ef4444', '#f97316', '#eab308', '#334155'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: { cutout: '82%', plugins: { legend: { display: false }, tooltip: { padding: 8 } }, maintainAspectRatio: false }
+            });
+
+            // Dynamic Trend Chart
+            const ctxDynamic = document.getElementById('dynamicTrendChart').getContext('2d');
+            const gradientBlueDyn = ctxDynamic.createLinearGradient(0, 0, 0, 300);
+            gradientBlueDyn.addColorStop(0, 'rgba(56, 189, 248, 0.25)');
+            gradientBlueDyn.addColorStop(1, 'rgba(56, 189, 248, 0)');
+
+            new Chart(ctxDynamic, {
+                type: 'line',
+                data: {
+                    labels: ['Q1 24', 'Q2 24', 'Q3 24', 'Q4 24', 'Q1 25', 'Q2 25', 'Q3 25', 'Q4 25', 'Q1 26'],
+                    datasets: [
+                        {
+                            label: 'MyBurger (You)',
+                            data: [11.5, 11.8, 12.0, 11.9, 12.3, 12.5, 12.8, 12.7, 12.4],
+                            borderColor: '#38bdf8',
+                            backgroundColor: gradientBlueDyn,
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#0f172a',
+                            pointBorderColor: '#38bdf8',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: 'McDonald\'s',
+                            data: [25.0, 25.5, 26.1, 26.5, 26.8, 27.2, 27.5, 27.9, 28.1],
+                            borderColor: '#f43f5e',
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointBackgroundColor: '#0f172a',
+                            pointBorderColor: '#f43f5e',
+                            pointBorderWidth: 2,
+                            pointRadius: 3,
+                            pointHoverRadius: 5,
+                            borderDash: [5, 5]
+                        },
+                        {
+                            label: 'KFC',
+                            data: [8.5, 8.8, 9.2, 9.5, 10.1, 10.6, 11.2, 11.8, 12.1],
+                            borderColor: '#fbbf24',
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointBackgroundColor: '#0f172a',
+                            pointBorderColor: '#fbbf24',
+                            pointBorderWidth: 2,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    layout: { padding: { top: 10, bottom: 5, right: 15, left: 5 } },
+                    scales: {
+                        y: {
+                            ticks: {
+                                font: { size: 11 },
+                                callback: function (value) { return value + '%'; }
+                            },
+                            border: { display: false },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 11 } },
+                            border: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleColor: '#f1f5f9',
+                            bodyColor: '#cbd5e1',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderWidth: 1,
+                            padding: 12,
+                            boxPadding: 6,
+                            callbacks: {
+                                label: function (context) {
+                                    return ` ${context.dataset.label}: ${context.parsed.y}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Competitive Benchmarking Table (dynamic metrics)
+            (function initCompetitiveBenchmarkTable() {
+                const tableEl = document.getElementById('competitiveBenchmarkTable');
+                const metricControlsEl = document.getElementById('benchmarkMetricControls');
+                const metricSummaryEl = document.getElementById('benchmarkMetricSummary');
+                const comparisonSelectEl = document.getElementById('benchmarkComparisonTarget');
+
+                if (!tableEl || !metricControlsEl || !metricSummaryEl || !comparisonSelectEl) {
+                    return;
+                }
+
+                const comparisonTargets = {
+                    mcd: { label: "McDonald's" },
+                    kfc: { label: 'KFC' },
+                    marketAvg: { label: 'Market Avg' }
+                };
+
+                const metricDefinitions = [
+                    { id: 'marketShare', label: 'Market Share', format: 'percent', decimals: 1, higherIsBetter: true, defaultSelected: true, mbFontClass: 'font-medium', compFontClass: '' },
+                    { id: 'avgComboPrice', label: 'Avg Combo Price', format: 'currency', decimals: 2, higherIsBetter: null, defaultSelected: true, mbFontClass: 'font-mono text-[12px]', compFontClass: 'font-mono text-[12px]' },
+                    { id: 'brandSentiment', label: 'Brand Sentiment', format: 'number', decimals: 1, higherIsBetter: true, defaultSelected: true, mbFontClass: 'font-medium', compFontClass: '' },
+                    { id: 'deliveryGrowth', label: 'Delivery Growth', format: 'signedPercent', decimals: 1, higherIsBetter: true, defaultSelected: true, mbFontClass: 'font-medium', compFontClass: '' },
+                    { id: 'orderAccuracy', label: 'Order Accuracy', format: 'percent', decimals: 1, higherIsBetter: true, defaultSelected: false, mbFontClass: 'font-medium', compFontClass: '' },
+                    { id: 'avgPrepTime', label: 'Avg Prep Time', format: 'minutes', decimals: 1, higherIsBetter: false, defaultSelected: false, mbFontClass: 'font-mono text-[12px]', compFontClass: 'font-mono text-[12px]' },
+                    { id: 'appRating', label: 'App Rating', format: 'number', decimals: 1, higherIsBetter: true, defaultSelected: false, mbFontClass: 'font-medium', compFontClass: '' }
+                ];
+
+                const benchmarkRegions = [
+                    {
+                        name: 'London',
+                        dotClass: 'bg-rose-500',
+                        metrics: {
+                            marketShare: { mb: 12.4, mcd: 14.2, kfc: 11.6, marketAvg: 13.2 },
+                            avgComboPrice: { mb: 14.5, mcd: 12.1, kfc: 11.4, marketAvg: 12.3 },
+                            brandSentiment: { mb: 4.8, mcd: 4.1, kfc: 3.9, marketAvg: 4.0 },
+                            deliveryGrowth: { mb: -1.2, mcd: 2.5, kfc: 1.9, marketAvg: 1.7 },
+                            orderAccuracy: { mb: 93.1, mcd: 91.8, kfc: 90.9, marketAvg: 90.7 },
+                            avgPrepTime: { mb: 17.4, mcd: 14.6, kfc: 15.2, marketAvg: 15.8 },
+                            appRating: { mb: 4.6, mcd: 4.3, kfc: 4.1, marketAvg: 4.2 }
+                        }
+                    },
+                    {
+                        name: 'North West',
+                        dotClass: 'bg-emerald-400',
+                        metrics: {
+                            marketShare: { mb: 24.0, mcd: 18.5, kfc: 12.7, marketAvg: 17.2 },
+                            avgComboPrice: { mb: 12.5, mcd: 11.8, kfc: 10.9, marketAvg: 11.5 },
+                            brandSentiment: { mb: 4.6, mcd: 4.2, kfc: 4.0, marketAvg: 4.1 },
+                            deliveryGrowth: { mb: 4.5, mcd: 1.8, kfc: 2.6, marketAvg: 2.1 },
+                            orderAccuracy: { mb: 95.0, mcd: 92.6, kfc: 91.8, marketAvg: 91.4 },
+                            avgPrepTime: { mb: 14.9, mcd: 15.5, kfc: 15.1, marketAvg: 15.8 },
+                            appRating: { mb: 4.7, mcd: 4.3, kfc: 4.2, marketAvg: 4.2 }
+                        }
+                    },
+                    {
+                        name: 'West Midlands',
+                        dotClass: 'bg-amber-500',
+                        metrics: {
+                            marketShare: { mb: 15.2, mcd: 16.0, kfc: 11.2, marketAvg: 14.5 },
+                            avgComboPrice: { mb: 13.2, mcd: 11.5, kfc: 10.8, marketAvg: 11.6 },
+                            brandSentiment: { mb: 4.2, mcd: 4.0, kfc: 3.8, marketAvg: 3.9 },
+                            deliveryGrowth: { mb: -0.5, mcd: 1.1, kfc: 0.9, marketAvg: 0.8 },
+                            orderAccuracy: { mb: 92.4, mcd: 91.7, kfc: 90.6, marketAvg: 90.9 },
+                            avgPrepTime: { mb: 16.8, mcd: 15.2, kfc: 15.6, marketAvg: 15.9 },
+                            appRating: { mb: 4.2, mcd: 4.1, kfc: 3.9, marketAvg: 4.0 }
+                        }
+                    },
+                    {
+                        name: 'Yorkshire and The Humber',
+                        dotClass: 'bg-emerald-400',
+                        metrics: {
+                            marketShare: { mb: 18.0, mcd: 15.8, kfc: 12.9, marketAvg: 15.1 },
+                            avgComboPrice: { mb: 12.8, mcd: 11.2, kfc: 10.7, marketAvg: 11.3 },
+                            brandSentiment: { mb: 4.4, mcd: 4.1, kfc: 3.9, marketAvg: 4.0 },
+                            deliveryGrowth: { mb: 2.8, mcd: 1.5, kfc: 1.9, marketAvg: 1.7 },
+                            orderAccuracy: { mb: 94.2, mcd: 92.1, kfc: 91.0, marketAvg: 91.3 },
+                            avgPrepTime: { mb: 15.7, mcd: 14.9, kfc: 15.0, marketAvg: 15.4 },
+                            appRating: { mb: 4.4, mcd: 4.2, kfc: 4.0, marketAvg: 4.1 }
+                        }
+                    },
+                    {
+                        name: 'Scotland',
+                        dotClass: 'bg-slate-500',
+                        metrics: {
+                            marketShare: { mb: 8.5, mcd: 12.0, kfc: 9.8, marketAvg: 10.9 },
+                            avgComboPrice: { mb: 13.5, mcd: 11.9, kfc: 11.3, marketAvg: 11.8 },
+                            brandSentiment: { mb: 4.5, mcd: 4.3, kfc: 4.0, marketAvg: 4.2 },
+                            deliveryGrowth: { mb: 5.1, mcd: 2.2, kfc: 2.5, marketAvg: 2.4 },
+                            orderAccuracy: { mb: 94.8, mcd: 92.9, kfc: 91.9, marketAvg: 92.0 },
+                            avgPrepTime: { mb: 15.4, mcd: 14.8, kfc: 14.9, marketAvg: 15.1 },
+                            appRating: { mb: 4.5, mcd: 4.3, kfc: 4.1, marketAvg: 4.2 }
+                        }
+                    }
+                ];
+
+                const selectedMetricIds = new Set(
+                    metricDefinitions.filter(function (metric) { return metric.defaultSelected; }).map(function (metric) { return metric.id; })
+                );
+
+                function formatMetricValue(metric, value) {
+                    if (typeof value !== 'number' || Number.isNaN(value)) {
+                        return '-';
+                    }
+
+                    if (metric.format === 'currency') {
+                        return '&pound;' + value.toFixed(metric.decimals || 0);
+                    }
+
+                    if (metric.format === 'percent') {
+                        return value.toFixed(metric.decimals || 0) + '%';
+                    }
+
+                    if (metric.format === 'signedPercent') {
+                        const prefix = value > 0 ? '+' : '';
+                        return prefix + value.toFixed(metric.decimals || 0) + '%';
+                    }
+
+                    if (metric.format === 'minutes') {
+                        return value.toFixed(metric.decimals || 0) + ' min';
+                    }
+
+                    return value.toFixed(metric.decimals || 0);
+                }
+
+                function getMyBurgerValueClass(metric, myBurgerValue, competitorValue) {
+                    if (metric.higherIsBetter === null || typeof myBurgerValue !== 'number' || typeof competitorValue !== 'number') {
+                        return 'text-white';
+                    }
+
+                    if (Math.abs(myBurgerValue - competitorValue) < 0.001) {
+                        return 'text-white';
+                    }
+
+                    const isBetter = metric.higherIsBetter ? myBurgerValue > competitorValue : myBurgerValue < competitorValue;
+                    return isBetter ? 'text-emerald-400' : 'text-rose-400';
+                }
+
+                function getSelectedMetricsInOrder() {
+                    return metricDefinitions.filter(function (metric) {
+                        return selectedMetricIds.has(metric.id);
+                    });
+                }
+
+                function renderMetricControls() {
+                    metricControlsEl.innerHTML = '';
+
+                    metricDefinitions.forEach(function (metric) {
+                        const label = document.createElement('label');
+                        label.className = 'flex items-center gap-2 cursor-pointer text-[11px] font-medium px-2.5 py-1.5 rounded-md border border-transparent w-full';
+
+                        const input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.checked = selectedMetricIds.has(metric.id);
+                        input.className = 'accent-blue-500 w-3.5 h-3.5';
+                        input.setAttribute('aria-label', metric.label);
+                        input.addEventListener('change', function () {
+                            if (input.checked) {
+                                selectedMetricIds.add(metric.id);
+                            } else {
+                                selectedMetricIds.delete(metric.id);
+                            }
+                            updateMetricControlStyles();
+                            renderCompetitiveBenchmarkTable();
+                        });
+
+                        const text = document.createElement('span');
+                        text.textContent = metric.label;
+
+                        label.appendChild(input);
+                        label.appendChild(text);
+                        metricControlsEl.appendChild(label);
+                    });
+
+                    updateMetricControlStyles();
+                }
+
+                function updateMetricControlStyles() {
+                    const labels = metricControlsEl.querySelectorAll('label');
+                    labels.forEach(function (label) {
+                        const input = label.querySelector('input[type="checkbox"]');
+                        const checked = !!(input && input.checked);
+
+                        label.classList.toggle('border-blue-500/60', checked);
+                        label.classList.toggle('bg-blue-900/20', checked);
+                        label.classList.toggle('text-slate-100', checked);
+                        label.classList.toggle('border-slate-700/50', !checked);
+                        label.classList.toggle('bg-slate-900/50', !checked);
+                        label.classList.toggle('text-slate-300', !checked);
+                    });
+
+                    metricSummaryEl.textContent = selectedMetricIds.size + ' selected';
+                }
+
+                function renderCompetitiveBenchmarkTable() {
+                    const comparatorKey = comparisonSelectEl.value || 'mcd';
+                    const comparator = comparisonTargets[comparatorKey] || comparisonTargets.mcd;
+                    const activeMetrics = getSelectedMetricsInOrder();
+
+                    if (!activeMetrics.length) {
+                        tableEl.innerHTML = ''
+                            + '<thead>'
+                            + '  <tr class="border-b border-slate-700/50 text-[11px] text-slate-400 font-medium tracking-wide uppercase bg-slate-800/50">'
+                            + '    <th class="py-2 pl-3 font-medium rounded-tl-md rounded-tr-md">Region</th>'
+                            + '  </tr>'
+                            + '</thead>'
+                            + '<tbody class="text-sm">'
+                            + '  <tr class="border-slate-700/30">'
+                            + '    <td class="py-4 px-3 text-slate-500">Choose at least one metric to display benchmark columns.</td>'
+                            + '  </tr>'
+                            + '</tbody>';
+                        return;
+                    }
+
+                    let html = '<thead>';
+                    html += '<tr class="border-b border-slate-700/50 text-[11px] text-slate-400 font-medium tracking-wide uppercase bg-slate-800/50">';
+                    html += '<th class="py-2 pl-3 font-medium rounded-tl-md" rowspan="2">Region</th>';
+
+                    activeMetrics.forEach(function (metric, index) {
+                        const isLast = index === activeMetrics.length - 1;
+                        html += '<th class="py-1.5 px-2 font-medium text-center border-l border-slate-700/50'
+                            + (isLast ? ' rounded-tr-md' : '')
+                            + '" colspan="2">' + metric.label + '</th>';
+                    });
+
+                    html += '</tr>';
+                    html += '<tr class="border-b border-slate-700/80 text-[10px] text-slate-500 uppercase bg-slate-800/20">';
+
+                    activeMetrics.forEach(function () {
+                        html += '<th class="pb-2 pt-1 px-2 text-center border-l border-slate-700/50 text-blue-400 font-semibold">MB</th>';
+                        html += '<th class="pb-2 pt-1 px-2 text-center text-slate-400">' + comparator.label + '</th>';
+                    });
+
+                    html += '</tr>';
+                    html += '</thead>';
+                    html += '<tbody class="text-sm">';
+
+                    benchmarkRegions.forEach(function (region, rowIndex) {
+                        const rowClass = rowIndex === benchmarkRegions.length - 1
+                            ? 'hover:bg-slate-700/20 transition-colors group'
+                            : 'border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors group';
+
+                        html += '<tr class="' + rowClass + '">';
+                        html += '<td class="py-2.5 pl-3 text-slate-200 font-medium">'
+                            + '<div class="flex items-center gap-2">'
+                            + '<div class="w-1.5 h-1.5 rounded-full ' + region.dotClass + '"></div>'
+                            + '<span>' + region.name + '</span>'
+                            + '</div>'
+                            + '</td>';
+
+                        activeMetrics.forEach(function (metric) {
+                            const metricValues = region.metrics[metric.id] || {};
+                            const myBurgerValue = metricValues.mb;
+                            const competitorValue = metricValues[comparatorKey];
+                            const mbColorClass = getMyBurgerValueClass(metric, myBurgerValue, competitorValue);
+                            const mbFontClass = metric.mbFontClass ? ' ' + metric.mbFontClass : '';
+                            const compFontClass = metric.compFontClass ? ' ' + metric.compFontClass : '';
+
+                            html += '<td class="py-2.5 px-2 text-center border-l border-slate-700/30 bg-blue-900/10 '
+                                + mbColorClass + mbFontClass + '">'
+                                + formatMetricValue(metric, myBurgerValue)
+                                + '</td>';
+
+                            html += '<td class="py-2.5 px-2 text-center text-slate-400'
+                                + compFontClass + '">'
+                                + formatMetricValue(metric, competitorValue)
+                                + '</td>';
+                        });
+
+                        html += '</tr>';
+                    });
+
+                    html += '</tbody>';
+                    tableEl.innerHTML = html;
+                }
+
+                comparisonSelectEl.addEventListener('change', renderCompetitiveBenchmarkTable);
+                renderMetricControls();
+                renderCompetitiveBenchmarkTable();
+            })();
+
+            // Expansion Opportunity Ranking Table (12M revenue-first)
+            (function initExpansionOpportunityTable() {
+                const tableEl = document.getElementById('expansionOpportunityTable');
+                const metricControlsEl = document.getElementById('expansionMetricControls');
+                const metricSummaryEl = document.getElementById('expansionMetricSummary');
+
+                if (!tableEl || !metricControlsEl || !metricSummaryEl) {
+                    return;
+                }
+
+                const driverMetricDefinitions = [
+                    { id: 'demandGrowthYoy', label: 'Demand Growth YoY', format: 'signedPercent', decimals: 1, higherIsBetter: true, defaultSelected: true },
+                    { id: 'orderDensityIndex', label: 'Order Density Index', format: 'index', decimals: 0, higherIsBetter: true, defaultSelected: true },
+                    { id: 'whiteSpaceIndex', label: 'White-space Index', format: 'index', decimals: 0, higherIsBetter: true, defaultSelected: true },
+                    { id: 'aov', label: 'Average Order Value', format: 'currency', decimals: 2, higherIsBetter: true, defaultSelected: true },
+                    { id: 'competitorPressureIndex', label: 'Competitor Pressure', format: 'index', decimals: 0, higherIsBetter: false, defaultSelected: false },
+                    { id: 'cannibalizationRisk', label: 'Cannibalization Risk', format: 'percent', decimals: 0, higherIsBetter: false, defaultSelected: false },
+                    { id: 'rentCostIndex', label: 'Rent Cost Index', format: 'index', decimals: 0, higherIsBetter: false, defaultSelected: false },
+                    { id: 'contributionMarginPct', label: 'Contribution Margin', format: 'percent', decimals: 1, higherIsBetter: true, defaultSelected: false },
+                    { id: 'siteAvailabilityIndex', label: 'Site Availability', format: 'index', decimals: 0, higherIsBetter: true, defaultSelected: false },
+                    { id: 'deliveryEtaMinutes', label: 'Delivery ETA', format: 'minutes', decimals: 0, higherIsBetter: false, defaultSelected: false },
+                    { id: 'brandSentiment', label: 'Brand Sentiment', format: 'number', decimals: 1, higherIsBetter: true, defaultSelected: false }
+                ];
+
+                const expansionRegions = [
+                    {
+                        name: 'North West',
+                        dotClass: 'bg-emerald-400',
+                        confidence: 88,
+                        topDrivers: ['high order density', 'strong white-space', 'fast payback'],
+                        core: {
+                            expectedMonthlyOrders: 9900,
+                            aov: 12.6,
+                            rampFactor12m: 0.90,
+                            shareGainOneStorePp: 0.62,
+                            paybackMonths: 15.4,
+                            regionCapacityStores: 3,
+                            diminishingReturnFactor: 0.78
+                        },
+                        drivers: {
+                            demandGrowthYoy: 9.4,
+                            orderDensityIndex: 86,
+                            whiteSpaceIndex: 82,
+                            aov: 12.6,
+                            competitorPressureIndex: 57,
+                            cannibalizationRisk: 24,
+                            rentCostIndex: 54,
+                            contributionMarginPct: 20.1,
+                            siteAvailabilityIndex: 75,
+                            deliveryEtaMinutes: 27,
+                            brandSentiment: 4.6
+                        }
+                    },
+                    {
+                        name: 'London',
+                        dotClass: 'bg-rose-500',
+                        confidence: 83,
+                        topDrivers: ['premium average order value', '4-store capacity', 'large TAM'],
+                        core: {
+                            expectedMonthlyOrders: 8600,
+                            aov: 14.4,
+                            rampFactor12m: 0.86,
+                            shareGainOneStorePp: 0.55,
+                            paybackMonths: 19.8,
+                            regionCapacityStores: 4,
+                            diminishingReturnFactor: 0.65
+                        },
+                        drivers: {
+                            demandGrowthYoy: 8.1,
+                            orderDensityIndex: 79,
+                            whiteSpaceIndex: 68,
+                            aov: 14.4,
+                            competitorPressureIndex: 78,
+                            cannibalizationRisk: 38,
+                            rentCostIndex: 92,
+                            contributionMarginPct: 17.4,
+                            siteAvailabilityIndex: 46,
+                            deliveryEtaMinutes: 31,
+                            brandSentiment: 4.7
+                        }
+                    },
+                    {
+                        name: 'Yorkshire and The Humber',
+                        dotClass: 'bg-emerald-400',
+                        confidence: 81,
+                        topDrivers: ['balanced demand growth', 'good white-space', 'solid capacity'],
+                        core: {
+                            expectedMonthlyOrders: 9000,
+                            aov: 12.9,
+                            rampFactor12m: 0.87,
+                            shareGainOneStorePp: 0.54,
+                            paybackMonths: 17.2,
+                            regionCapacityStores: 3,
+                            diminishingReturnFactor: 0.76
+                        },
+                        drivers: {
+                            demandGrowthYoy: 7.2,
+                            orderDensityIndex: 78,
+                            whiteSpaceIndex: 74,
+                            aov: 12.9,
+                            competitorPressureIndex: 52,
+                            cannibalizationRisk: 29,
+                            rentCostIndex: 58,
+                            contributionMarginPct: 19.0,
+                            siteAvailabilityIndex: 70,
+                            deliveryEtaMinutes: 28,
+                            brandSentiment: 4.4
+                        }
+                    },
+                    {
+                        name: 'West Midlands',
+                        dotClass: 'bg-amber-500',
+                        confidence: 79,
+                        topDrivers: ['mid-market average order value', 'acceptable white-space', 'stable execution'],
+                        core: {
+                            expectedMonthlyOrders: 7300,
+                            aov: 13.1,
+                            rampFactor12m: 0.82,
+                            shareGainOneStorePp: 0.39,
+                            paybackMonths: 18.6,
+                            regionCapacityStores: 2,
+                            diminishingReturnFactor: 0.74
+                        },
+                        drivers: {
+                            demandGrowthYoy: 4.8,
+                            orderDensityIndex: 63,
+                            whiteSpaceIndex: 59,
+                            aov: 13.1,
+                            competitorPressureIndex: 61,
+                            cannibalizationRisk: 33,
+                            rentCostIndex: 64,
+                            contributionMarginPct: 17.8,
+                            siteAvailabilityIndex: 66,
+                            deliveryEtaMinutes: 30,
+                            brandSentiment: 4.2
+                        }
+                    },
+                    {
+                        name: 'Scotland',
+                        dotClass: 'bg-slate-500',
+                        confidence: 74,
+                        topDrivers: ['higher average order value', 'regional whitespace', 'brand sentiment support'],
+                        core: {
+                            expectedMonthlyOrders: 6800,
+                            aov: 13.7,
+                            rampFactor12m: 0.80,
+                            shareGainOneStorePp: 0.34,
+                            paybackMonths: 20.7,
+                            regionCapacityStores: 2,
+                            diminishingReturnFactor: 0.70
+                        },
+                        drivers: {
+                            demandGrowthYoy: 3.2,
+                            orderDensityIndex: 52,
+                            whiteSpaceIndex: 63,
+                            aov: 13.7,
+                            competitorPressureIndex: 48,
+                            cannibalizationRisk: 21,
+                            rentCostIndex: 56,
+                            contributionMarginPct: 16.9,
+                            siteAvailabilityIndex: 58,
+                            deliveryEtaMinutes: 34,
+                            brandSentiment: 4.5
+                        }
+                    }
+                ];
+
+                const scoreWeights = {
+                    revenuePotential12mCapacityAdjusted: 0.55,
+                    revenue12mOneStore: 0.25,
+                    shareGainCapacityPp: 0.15,
+                    shareGainOneStorePp: 0.05
+                };
+
+                const selectedDriverMetricIds = new Set(
+                    driverMetricDefinitions.filter(function (metric) { return metric.defaultSelected; }).map(function (metric) { return metric.id; })
+                );
+
+                function geometricSeriesMultiplier(count, factor) {
+                    if (!count || count <= 0) {
+                        return 0;
+                    }
+
+                    if (Math.abs(1 - factor) < 0.00001) {
+                        return count;
+                    }
+
+                    return (1 - Math.pow(factor, count)) / (1 - factor);
+                }
+
+                function formatCompactCurrency(value) {
+                    if (typeof value !== 'number' || Number.isNaN(value)) {
+                        return '-';
+                    }
+
+                    const absValue = Math.abs(value);
+                    if (absValue >= 1000000) {
+                        return '&pound;' + (value / 1000000).toFixed(2) + 'M';
+                    }
+                    if (absValue >= 1000) {
+                        return '&pound;' + (value / 1000).toFixed(0) + 'K';
+                    }
+                    return '&pound;' + value.toFixed(0);
+                }
+
+                function formatDriverMetricValue(metric, value) {
+                    if (typeof value !== 'number' || Number.isNaN(value)) {
+                        return '-';
+                    }
+
+                    if (metric.format === 'currency') {
+                        return '&pound;' + value.toFixed(metric.decimals || 0);
+                    }
+                    if (metric.format === 'percent') {
+                        return value.toFixed(metric.decimals || 0) + '%';
+                    }
+                    if (metric.format === 'signedPercent') {
+                        return (value > 0 ? '+' : '') + value.toFixed(metric.decimals || 0) + '%';
+                    }
+                    if (metric.format === 'minutes') {
+                        return value.toFixed(metric.decimals || 0) + ' min';
+                    }
+                    return value.toFixed(metric.decimals || 0);
+                }
+
+                function normalizeValue(value, minValue, maxValue) {
+                    if (typeof value !== 'number' || Number.isNaN(value)) {
+                        return 0;
+                    }
+                    if (Math.abs(maxValue - minValue) < 0.00001) {
+                        return 1;
+                    }
+                    return (value - minValue) / (maxValue - minValue);
+                }
+
+                function getRecommendation(score) {
+                    if (score >= 80) {
+                        return 'Open now';
+                    }
+                    if (score >= 60) {
+                        return 'Pilot';
+                    }
+                    return 'Watchlist';
+                }
+
+                function getRecommendationBadgeClass(recommendation) {
+                    if (recommendation === 'Open now') {
+                        return 'text-emerald-300 bg-emerald-500/10 border border-emerald-400/20';
+                    }
+                    if (recommendation === 'Pilot') {
+                        return 'text-amber-300 bg-amber-500/10 border border-amber-400/20';
+                    }
+                    return 'text-slate-300 bg-slate-700/40 border border-slate-600/40';
+                }
+
+                function getScoreTextClass(score) {
+                    if (score >= 80) {
+                        return 'text-emerald-400';
+                    }
+                    if (score >= 60) {
+                        return 'text-amber-300';
+                    }
+                    return 'text-slate-300';
+                }
+
+                function getConfidenceTextClass(confidence) {
+                    if (confidence >= 85) {
+                        return 'text-emerald-400';
+                    }
+                    if (confidence >= 78) {
+                        return 'text-amber-300';
+                    }
+                    return 'text-slate-400';
+                }
+
+                function prepareScoredRegions() {
+                    const rows = expansionRegions.map(function (region) {
+                        const oneStoreRevenue12m = region.core.expectedMonthlyOrders * region.core.aov * 12 * region.core.rampFactor12m;
+                        const revenueCapacityMultiplier = geometricSeriesMultiplier(region.core.regionCapacityStores, region.core.diminishingReturnFactor);
+                        const shareCapacityMultiplier = geometricSeriesMultiplier(region.core.regionCapacityStores, region.core.diminishingReturnFactor);
+                        const revenuePotential12mCapacityAdjusted = oneStoreRevenue12m * revenueCapacityMultiplier;
+                        const shareGainCapacityPp = region.core.shareGainOneStorePp * shareCapacityMultiplier;
+
+                        return {
+                            name: region.name,
+                            dotClass: region.dotClass,
+                            confidence: region.confidence,
+                            topDrivers: region.topDrivers.slice(),
+                            core: {
+                                expectedMonthlyOrders: region.core.expectedMonthlyOrders,
+                                revenue12mOneStore: oneStoreRevenue12m,
+                                shareGainOneStorePp: region.core.shareGainOneStorePp,
+                                paybackMonths: region.core.paybackMonths,
+                                regionCapacityStores: region.core.regionCapacityStores,
+                                diminishingReturnFactor: region.core.diminishingReturnFactor,
+                                revenuePotential12mCapacityAdjusted: revenuePotential12mCapacityAdjusted,
+                                shareGainCapacityPp: shareGainCapacityPp
+                            },
+                            drivers: Object.assign({}, region.drivers),
+                            score: 0,
+                            recommendation: 'Watchlist',
+                            rank: 0
+                        };
+                    });
+
+                    const scoreKeys = Object.keys(scoreWeights);
+                    const ranges = {};
+
+                    scoreKeys.forEach(function (key) {
+                        const values = rows.map(function (row) { return row.core[key]; });
+                        ranges[key] = {
+                            min: Math.min.apply(Math, values),
+                            max: Math.max.apply(Math, values)
+                        };
+                    });
+
+                    rows.forEach(function (row) {
+                        let weightedScore = 0;
+                        scoreKeys.forEach(function (key) {
+                            const normalized = normalizeValue(row.core[key], ranges[key].min, ranges[key].max);
+                            weightedScore += normalized * scoreWeights[key];
+                        });
+                        row.score = Math.round(weightedScore * 1000) / 10;
+                        row.recommendation = getRecommendation(row.score);
+                    });
+
+                    rows.sort(function (a, b) {
+                        if (b.score !== a.score) return b.score - a.score;
+                        return b.core.revenuePotential12mCapacityAdjusted - a.core.revenuePotential12mCapacityAdjusted;
+                    });
+
+                    rows.forEach(function (row, index) {
+                        row.rank = index + 1;
+                    });
+
+                    return rows;
+                }
+
+                const scoredRegions = prepareScoredRegions();
+
+                const driverMetricRanges = driverMetricDefinitions.reduce(function (acc, metric) {
+                    const values = scoredRegions.map(function (row) {
+                        return row.drivers[metric.id];
+                    }).filter(function (value) {
+                        return typeof value === 'number' && !Number.isNaN(value);
+                    });
+
+                    acc[metric.id] = {
+                        min: values.length ? Math.min.apply(Math, values) : 0,
+                        max: values.length ? Math.max.apply(Math, values) : 0
+                    };
+                    return acc;
+                }, {});
+
+                function getDriverMetricTextClass(metric, value) {
+                    const range = driverMetricRanges[metric.id];
+                    if (typeof value !== 'number' || !range) {
+                        return 'text-slate-400';
+                    }
+
+                    let normalized = normalizeValue(value, range.min, range.max);
+                    if (metric.higherIsBetter === false) {
+                        normalized = 1 - normalized;
+                    }
+
+                    if (normalized >= 0.66) {
+                        return 'text-emerald-400';
+                    }
+                    if (normalized >= 0.4) {
+                        return 'text-slate-200';
+                    }
+                    return 'text-rose-300';
+                }
+
+                function getActiveDriverMetricsInOrder() {
+                    return driverMetricDefinitions.filter(function (metric) {
+                        return selectedDriverMetricIds.has(metric.id);
+                    });
+                }
+
+                function renderExpansionMetricControls() {
+                    metricControlsEl.innerHTML = '';
+
+                    driverMetricDefinitions.forEach(function (metric) {
+                        const label = document.createElement('label');
+                        label.className = 'flex items-center gap-2 cursor-pointer text-[11px] font-medium px-2.5 py-1.5 rounded-md border border-transparent w-full';
+
+                        const input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.checked = selectedDriverMetricIds.has(metric.id);
+                        input.className = 'accent-cyan-500 w-3.5 h-3.5';
+                        input.setAttribute('aria-label', metric.label);
+                        input.addEventListener('change', function () {
+                            if (input.checked) {
+                                selectedDriverMetricIds.add(metric.id);
+                            } else {
+                                selectedDriverMetricIds.delete(metric.id);
+                            }
+                            updateExpansionMetricControlStyles();
+                            renderExpansionOpportunityTable();
+                        });
+
+                        const text = document.createElement('span');
+                        text.textContent = metric.label;
+
+                        label.appendChild(input);
+                        label.appendChild(text);
+                        metricControlsEl.appendChild(label);
+                    });
+
+                    updateExpansionMetricControlStyles();
+                }
+
+                function updateExpansionMetricControlStyles() {
+                    const labels = metricControlsEl.querySelectorAll('label');
+                    labels.forEach(function (label) {
+                        const input = label.querySelector('input[type="checkbox"]');
+                        const checked = !!(input && input.checked);
+
+                        label.classList.toggle('border-cyan-500/50', checked);
+                        label.classList.toggle('bg-cyan-500/10', checked);
+                        label.classList.toggle('text-slate-100', checked);
+                        label.classList.toggle('border-slate-700/50', !checked);
+                        label.classList.toggle('bg-slate-900/50', !checked);
+                        label.classList.toggle('text-slate-300', !checked);
+                    });
+
+                    metricSummaryEl.textContent = selectedDriverMetricIds.size + ' selected';
+                }
+
+                function renderExpansionOpportunityTable() {
+                    const activeDriverMetrics = getActiveDriverMetricsInOrder();
+                    const showDriversGroup = activeDriverMetrics.length > 0;
+                    const baseHeaderRowspan = showDriversGroup ? ' rowspan="2"' : '';
+                    const baseHeaderBottomBorderClass = showDriversGroup ? ' border-b border-slate-700/80' : '';
+                    const topHeaderRowClass = (showDriversGroup ? '' : 'border-b border-slate-700/50 ')
+                        + 'text-[11px] text-slate-400 font-medium tracking-wide uppercase bg-slate-800/50';
+
+                    let html = '<thead>';
+                    html += '<tr class="' + topHeaderRowClass + '">';
+                    html += '<th class="py-2 pl-3 pr-2 font-medium text-left align-middle rounded-tl-md' + baseHeaderBottomBorderClass + '"' + baseHeaderRowspan + '>Rank</th>';
+                    html += '<th class="py-2 px-2 font-medium text-left align-middle' + (showDriversGroup ? '' : ' rounded-tr-md') + baseHeaderBottomBorderClass + '"' + baseHeaderRowspan + '>Region</th>';
+                    if (showDriversGroup) {
+                        html += '<th class="py-1.5 px-2 font-medium text-center border-l border-slate-700/50 rounded-tr-md" colspan="' + activeDriverMetrics.length + '">Drivers</th>';
+                    }
+                    html += '</tr>';
+                    if (showDriversGroup) {
+                        html += '<tr class="border-b border-slate-700/80 text-[10px] text-slate-500 uppercase bg-slate-800/20">';
+                        activeDriverMetrics.forEach(function (metric, index) {
+                            html += '<th class="pb-2 pt-1 px-2 text-center' + (index === 0 ? ' border-l border-slate-700/50' : '') + '">' + metric.label + '</th>';
+                        });
+                        html += '</tr>';
+                    }
+                    html += '</thead>';
+                    html += '<tbody class="text-sm">';
+
+                    scoredRegions.forEach(function (row, rowIndex) {
+                        const rowClass = rowIndex === scoredRegions.length - 1
+                            ? 'hover:bg-slate-700/20 transition-colors group'
+                            : 'border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors group';
+
+                        html += '<tr class="' + rowClass + '">';
+                        html += '<td class="py-2.5 pl-3 pr-2 text-slate-300 font-semibold">' + row.rank + '</td>';
+                        html += '<td class="py-2.5 px-2 text-slate-200 font-medium">'
+                            + '<div class="flex items-center gap-2">'
+                            + '<div class="w-1.5 h-1.5 rounded-full ' + row.dotClass + '"></div>'
+                            + '<span>' + row.name + '</span>'
+                            + '</div>'
+                            + '</td>';
+
+                        activeDriverMetrics.forEach(function (metric, index) {
+                            const value = row.drivers[metric.id];
+                            const valueClass = getDriverMetricTextClass(metric, value);
+                            html += '<td class="py-2.5 px-2 text-center ' + (index === 0 ? 'border-l border-slate-700/30 ' : '') + valueClass + '">'
+                                + formatDriverMetricValue(metric, value)
+                                + '</td>';
+                        });
+
+                        html += '</tr>';
+                    });
+
+                    html += '</tbody>';
+                    tableEl.innerHTML = html;
+                }
+
+                renderExpansionMetricControls();
+                renderExpansionOpportunityTable();
+            })();
+        </script>
+</body>
+
+
+</html>
